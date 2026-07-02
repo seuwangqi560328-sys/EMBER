@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORGE OF STARS</title>
+<style>
+  :root{
+    --deep:#0b0a1f;
+    --deep-2:#151235;
+    --panel:#1a1740;
+    --panel-2:#221d52;
+    --line:#332c6b;
+    --ember:#ff7a18;
+    --ember-2:#ffb347;
+    --ember-glow:#ff7a18;
+    --gold:#ffd668;
+    --cyan:#5fe6ff;
+    --violet:#b98cff;
+    --ash:#8a83b8;
+    --text:#efeaff;
+    --ok:#5fffb0;
+    --lock:#4a4470;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;background:var(--deep);}
+  body{
+    font-family:'Segoe UI',system-ui,sans-serif;
+    color:var(--text);
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #app{
+    width:100%;height:100%;
+    display:grid;
+    grid-template-columns:1fr minmax(340px,420px);
+    background:
+      radial-gradient(ellipse at 30% 20%, #1a1445 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, #241a4d 0%, transparent 50%),
+      var(--deep);
+  }
+  @media (max-width:820px){
+    #app{grid-template-columns:1fr;grid-template-rows:1fr 1fr;}
+  }
+
+  /* ---------- FORGE (left) ---------- */
+  #forge{
+    position:relative;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    overflow:hidden;padding:24px;
+  }
+  #starfield{position:absolute;inset:0;pointer-events:none;}
+  .resource{
+    text-align:center;z-index:2;margin-bottom:8px;
+  }
+  .ember-count{
+    font-size:clamp(38px,7vw,62px);font-weight:800;
+    letter-spacing:-1px;line-height:1;
+    color:var(--ember-2);
+    text-shadow:0 0 30px var(--ember-glow), 0 0 60px rgba(255,122,24,.35);
+    font-variant-numeric:tabular-nums;
+  }
+  .ember-label{
+    font-size:11px;letter-spacing:5px;text-transform:uppercase;
+    color:var(--ash);margin-top:6px;
+  }
+  .rates{
+    display:flex;gap:22px;justify-content:center;z-index:2;
+    margin-bottom:26px;font-size:12px;color:var(--ash);
+    font-variant-numeric:tabular-nums;
+  }
+  .rates b{color:var(--ember-2);font-weight:700;}
+  .rates .per-click b{color:var(--gold);}
+
+  /* the core */
+  #coreWrap{
+    position:relative;z-index:2;
+    width:min(46vw,300px);height:min(46vw,300px);
+    max-width:300px;max-height:300px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;user-select:none;
+  }
+  #core{
+    width:100%;height:100%;border-radius:50%;
+    background:
+      radial-gradient(circle at 38% 34%, #fff6e0 0%, var(--ember-2) 22%, var(--ember) 48%, #b83a08 78%, #5c1c02 100%);
+    box-shadow:
+      0 0 60px rgba(255,122,24,.55),
+      0 0 120px rgba(255,122,24,.30),
+      inset -18px -22px 60px rgba(70,10,0,.65),
+      inset 12px 14px 40px rgba(255,240,200,.4);
+    transition:transform .06s ease-out;
+    position:relative;
+  }
+  #core::after{
+    content:"";position:absolute;inset:14%;border-radius:50%;
+    background:radial-gradient(circle at 40% 36%, rgba(255,255,255,.5), transparent 55%);
+    mix-blend-mode:screen;
+  }
+  #coreWrap:active #core{transform:scale(.94);}
+  .core-ring{
+    position:absolute;border:1px solid rgba(255,180,90,.25);
+    border-radius:50%;pointer-events:none;
+  }
+  .hint{
+    z-index:2;margin-top:24px;font-size:12px;color:var(--ash);
+    letter-spacing:2px;text-transform:uppercase;
+  }
+  .float{
+    position:absolute;pointer-events:none;z-index:5;
+    font-weight:800;color:var(--gold);
+    text-shadow:0 0 12px rgba(255,214,104,.7);
+    animation:floatUp .9s ease-out forwards;
+    font-variant-numeric:tabular-nums;
+  }
+  @keyframes floatUp{
+    0%{opacity:1;transform:translateY(0) scale(1);}
+    100%{opacity:0;transform:translateY(-70px) scale(1.3);}
+  }
+
+  /* progress to victory */
+  #victoryBar{
+    z-index:2;width:min(70%,340px);margin-top:26px;
+  }
+  #victoryBar .vb-label{
+    display:flex;justify-content:space-between;
+    font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--ash);margin-bottom:6px;
+  }
+  #victoryBar .vb-track{
+    height:6px;border-radius:3px;background:var(--panel);
+    overflow:hidden;border:1px solid var(--line);
+  }
+  #victoryBar .vb-fill{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--ember),var(--gold),var(--cyan));
+    box-shadow:0 0 14px var(--ember-glow);
+    transition:width .3s;
+  }
+
+  /* ---------- SHOP (right) ---------- */
+  #shop{
+    background:linear-gradient(180deg, rgba(21,18,53,.6), rgba(11,10,31,.85));
+    border-left:1px solid var(--line);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+  }
+  @media (max-width:820px){#shop{border-left:none;border-top:1px solid var(--line);}}
+  .shop-head{
+    padding:18px 22px 12px;border-bottom:1px solid var(--line);
+  }
+  .shop-head h1{
+    font-size:15px;letter-spacing:6px;text-transform:uppercase;
+    color:var(--ember-2);font-weight:800;
+  }
+  .shop-head p{font-size:11px;color:var(--ash);margin-top:4px;letter-spacing:1px;}
+  .tabs{
+    display:flex;gap:0;border-bottom:1px solid var(--line);
+  }
+  .tab{
+    flex:1;padding:11px 6px;text-align:center;cursor:pointer;
+    font-size:11px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--ash);border-bottom:2px solid transparent;
+    transition:all .15s;user-select:none;
+  }
+  .tab:hover{color:var(--text);}
+  .tab.active{color:var(--ember-2);border-bottom-color:var(--ember);background:rgba(255,122,24,.06);}
+  .tab .dot{
+    display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--ok);margin-left:5px;box-shadow:0 0 6px var(--ok);
+    animation:pulseDot 1.2s infinite;
+  }
+  @keyframes pulseDot{0%,100%{opacity:.4;}50%{opacity:1;}}
+  .list{flex:1;overflow-y:auto;padding:14px;}
+  .list::-webkit-scrollbar{width:8px;}
+  .list::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;padding:13px 15px;margin-bottom:11px;
+    cursor:pointer;transition:all .14s;position:relative;overflow:hidden;
+  }
+  .card:hover:not(.locked):not(.maxed){
+    border-color:var(--ember);transform:translateY(-1px);
+    box-shadow:0 6px 20px rgba(0,0,0,.3);
+  }
+  .card.affordable{border-color:rgba(255,171,71,.5);}
+  .card.affordable::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--ember);box-shadow:0 0 12px var(--ember-glow);
+  }
+  .card.locked{opacity:.45;cursor:not-allowed;}
+  .card.maxed{opacity:.7;cursor:default;border-color:var(--ok);}
+  .card-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .card-name{font-weight:700;font-size:14px;color:var(--text);}
+  .card-name .tier{font-size:10px;color:var(--violet);letter-spacing:1px;margin-left:6px;}
+  .card-owned{font-size:12px;color:var(--ash);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .card-desc{font-size:11.5px;color:var(--ash);margin:6px 0 9px;line-height:1.5;}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;}
+  .card-cost{
+    font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;
+    color:var(--gold);
+  }
+  .card-cost.cant{color:#a05a5a;}
+  .card-effect{font-size:11px;color:var(--cyan);font-variant-numeric:tabular-nums;}
+  .lock-note{font-size:10px;color:var(--lock);letter-spacing:1px;text-transform:uppercase;}
+  .maxed-note{font-size:11px;color:var(--ok);letter-spacing:1px;text-transform:uppercase;font-weight:700;}
+
+  /* final upgrade special */
+  .card.final{
+    background:linear-gradient(135deg,#2a1a4d,#3d1f2e);
+    border:1px solid var(--gold);
+  }
+  .card.final .card-name{color:var(--gold);text-shadow:0 0 14px rgba(255,214,104,.5);}
+  .card.final.affordable{animation:finalGlow 1.4s infinite;}
+  @keyframes finalGlow{
+    0%,100%{box-shadow:0 0 20px rgba(255,214,104,.2);}
+    50%{box-shadow:0 0 40px rgba(255,214,104,.55);}
+  }
+
+  /* controls */
+  .shop-foot{
+    padding:10px 14px;border-top:1px solid var(--line);
+    display:flex;gap:8px;align-items:center;
+  }
+  .buy-mode{display:flex;gap:4px;}
+  .buy-mode button{
+    background:var(--panel);border:1px solid var(--line);color:var(--ash);
+    padding:6px 10px;border-radius:7px;font-size:11px;cursor:pointer;
+    font-weight:700;transition:all .12s;
+  }
+  .buy-mode button.active{color:var(--deep);background:var(--ember-2);border-color:var(--ember-2);}
+  .ghost-btn{
+    margin-left:auto;background:transparent;border:1px solid var(--line);
+    color:var(--ash);padding:6px 12px;border-radius:7px;font-size:11px;
+    cursor:pointer;transition:all .12s;letter-spacing:1px;
+  }
+  .ghost-btn:hover{color:var(--text);border-color:var(--ash);}
+
+  /* victory overlay */
+  #win{
+    position:fixed;inset:0;z-index:50;display:none;
+    flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:32px;
+    background:radial-gradient(ellipse at center, rgba(60,30,10,.85), rgba(11,10,31,.97));
+    backdrop-filter:blur(4px);
+  }
+  #win.show{display:flex;animation:fadeIn .8s;}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  #win .wtitle{
+    font-size:clamp(40px,9vw,84px);font-weight:900;letter-spacing:4px;
+    background:linear-gradient(90deg,var(--ember),var(--gold),var(--cyan),var(--violet));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 30px rgba(255,180,90,.5));margin-bottom:14px;
+  }
+  #win .wsub{font-size:14px;color:var(--ember-2);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
+  #win .wstats{font-size:13px;color:var(--ash);margin-bottom:32px;line-height:2;font-variant-numeric:tabular-nums;}
+  #win .wstats b{color:var(--gold);}
+  #win button{
+    background:transparent;border:1px solid var(--gold);color:var(--gold);
+    padding:15px 40px;font-size:14px;letter-spacing:3px;text-transform:uppercase;
+    cursor:pointer;border-radius:8px;transition:all .2s;font-weight:700;
+  }
+  #win button:hover{background:var(--gold);color:var(--deep);box-shadow:0 0 40px var(--gold);}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--panel-2);border:1px solid var(--ember);
+    color:var(--text);padding:12px 22px;border-radius:10px;font-size:13px;
+    z-index:40;box-shadow:0 8px 30px rgba(0,0,0,.5);
+    opacity:0;transition:opacity .3s, transform .3s;pointer-events:none;
+    max-width:80%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+  .toast .t-name{color:var(--gold);font-weight:700;}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- FORGE -->
+  <section id="forge">
+    <canvas id="starfield"></canvas>
+    <div class="resource">
+      <div class="ember-count" id="emberCount">0</div>
+      <div class="ember-label">Ember</div>
+    </div>
+    <div class="rates">
+      <div class="per-click">per strike <b id="perClick">1</b></div>
+      <div class="per-sec">per second <b id="perSec">0</b></div>
+    </div>
+    <div id="coreWrap">
+      <div class="core-ring" style="inset:-14px;"></div>
+      <div class="core-ring" style="inset:-28px;opacity:.5;"></div>
+      <div id="core"></div>
+    </div>
+    <div class="hint" id="forgeHint">Strike the core</div>
+    <div id="victoryBar">
+      <div class="vb-label"><span>Path to ignition</span><span id="vbPct">0%</span></div>
+      <div class="vb-track"><div class="vb-fill" id="vbFill"></div></div>
+    </div>
+  </section>
+
+  <!-- SHOP -->
+  <section id="shop">
+    <div class="shop-head">
+      <h1>The Forge</h1>
+      <p>Spend Ember. Amplify the flame. Ignite a star.</p>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="list" id="list"></div>
+    <div class="shop-foot">
+      <span style="font-size:11px;color:var(--ash);letter-spacing:1px;">Buy</span>
+      <div class="buy-mode" id="buyMode">
+        <button data-n="1" class="active">×1</button>
+        <button data-n="10">×10</button>
+        <button data-n="max">MAX</button>
+      </div>
+      <button class="ghost-btn" id="resetBtn">Reset</button>
+    </div>
+  </section>
+</div>
+
+<div id="win">
+  <div class="wtitle">A STAR IS BORN</div>
+  <div class="wsub">The Forge of Stars is complete</div>
+  <div class="wstats" id="winStats"></div>
+  <button id="winReset">Forge Again</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- number formatting ----------
+  const SUFFIX = ['','K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
+  function fmt(n){
+    if(n < 1000) return (n%1===0? n : n.toFixed(1)).toString();
+    let i = Math.floor(Math.log10(n)/3);
+    if(i >= SUFFIX.length){ return n.toExponential(2); }
+    let v = n / Math.pow(1000,i);
+    return (v>=100? v.toFixed(0) : v>=10? v.toFixed(1) : v.toFixed(2)) + SUFFIX[i];
+  }
+
+  // ---------- state ----------
+  const S = {
+    ember: 0,
+    totalEarned: 0,
+    clicks: 0,
+    started: Date.now(),
+    upgrades: {},   // id -> owned count
+    buyN: 1,
+    tab: 'strike',
+    won: false
+  };
+
+  // ---------- upgrade definitions ----------
+  // kind: 'click' adds to per-click, 'auto' adds to per-second,
+  //       'mult' multiplies a category, 'final' wins the game.
+  // cost grows geometrically. max caps ownership.
+  const UP = [
+    // ===== STRIKE tab: click power =====
+    { id:'hammer',   tab:'strike', tier:'I',  name:'Iron Hammer',
+      desc:'A heavier hammer. +1 Ember per strike.',
+      kind:'click', base:15, growth:1.15, add:1, max:200 },
+    { id:'gloves',   tab:'strike', tier:'I',  name:'Ember Gauntlets',
+      desc:'Grip the heat itself. +4 Ember per strike.',
+      kind:'click', base:120, growth:1.16, add:4, max:150 },
+    { id:'anvil',    tab:'strike', tier:'II', name:'Meteor Anvil',
+      desc:'Struck ore rings true. +25 Ember per strike.',
+      kind:'click', base:2600, growth:1.18, add:25, max:120,
+      req:{hammer:15} },
+    { id:'starpick', tab:'strike', tier:'III',name:'Starpick',
+      desc:'Chip fragments from fallen stars. +180 per strike.',
+      kind:'click', base:90000, growth:1.20, add:180, max:100,
+      req:{anvil:10} },
+    { id:'clickmult',tab:'strike', tier:'III',name:'Resonance Temper',
+      desc:'Each level DOUBLES all per-strike Ember.',
+      kind:'mult', target:'click', base:50000, growth:6, mult:2, max:12,
+      req:{gloves:10} },
+
+    // ===== FORGE tab: automation =====
+    { id:'bellows',  tab:'forge', tier:'I',  name:'Bellows',
+      desc:'Keeps the coals breathing. +1 Ember/sec.',
+      kind:'auto', base:60, growth:1.15, add:1, max:200 },
+    { id:'apprentice',tab:'forge',tier:'I',  name:'Apprentice Smith',
+      desc:'They work while you rest. +6 Ember/sec.',
+      kind:'auto', base:700, growth:1.16, add:6, max:180 },
+    { id:'crucible', tab:'forge', tier:'II', name:'Solar Crucible',
+      desc:'Molten light, contained. +45 Ember/sec.',
+      kind:'auto', base:14000, growth:1.18, add:45, max:150,
+      req:{bellows:15} },
+    { id:'reactor',  tab:'forge', tier:'III',name:'Fusion Reactor',
+      desc:'Bind hydrogen to fire. +400 Ember/sec.',
+      kind:'auto', base:520000, growth:1.20, add:400, max:120,
+      req:{crucible:10} },
+    { id:'automult', tab:'forge', tier:'III',name:'Overdrive Core',
+      desc:'Each level DOUBLES all Ember/sec.',
+      kind:'mult', target:'auto', base:300000, growth:6, mult:2, max:12,
+      req:{apprentice:10} },
+
+    // ===== COSMOS tab: global + final =====
+    { id:'catalyst', tab:'cosmos', tier:'IV', name:'Quantum Catalyst',
+      desc:'Warp spacetime. Each level ×1.5 to ALL Ember.',
+      kind:'mult', target:'all', base:2.5e6, growth:8, mult:1.5, max:15,
+      req:{clickmult:3, automult:3} },
+    { id:'singularity',tab:'cosmos',tier:'V',name:'Caged Singularity',
+      desc:'A tamed black hole feeds the forge. ×3 to ALL Ember.',
+      kind:'mult', target:'all', base:5e8, growth:12, mult:3, max:8,
+      req:{catalyst:4} },
+    { id:'nova',     tab:'cosmos', tier:'V', name:'Nova Conduit',
+      desc:'Channel a dying sun. +50,000 Ember/sec.',
+      kind:'auto', base:2e8, growth:1.22, add:50000, max:100,
+      req:{reactor:10} },
+    { id:'FINAL',    tab:'cosmos', tier:'★', name:'Ignite a New Star',
+      desc:'Everything has led here. Pour all your Ember into the void and light a sun of your own. This ends the game — in triumph.',
+      kind:'final', base:1e12, growth:1, add:0, max:1,
+      req:{singularity:2, nova:5} },
+  ];
+
+  const UPMAP = {};
+  UP.forEach(u => { UPMAP[u.id] = u; S.upgrades[u.id] = 0; });
+
+  const TABS = [
+    { id:'strike', name:'Strike' },
+    { id:'forge',  name:'Forge' },
+    { id:'cosmos', name:'Cosmos' },
+  ];
+
+  // ---------- persistence ----------
+  const SAVE_KEY = 'forge_of_stars_v1';
+  function save(){
+    try{
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        ember:S.ember, totalEarned:S.totalEarned, clicks:S.clicks,
+        started:S.started, upgrades:S.upgrades, won:S.won
+      }));
+    }catch(e){}
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return;
+      const d = JSON.parse(raw);
+      S.ember = d.ember||0; S.totalEarned = d.totalEarned||0;
+      S.clicks = d.clicks||0; S.started = d.started||Date.now();
+      S.won = d.won||false;
+      if(d.upgrades) for(const k in S.upgrades){ S.upgrades[k] = d.upgrades[k]||0; }
+    }catch(e){}
+  }
+  load();
+
+  // ---------- cost / effect math ----------
+  function costOf(u, owned){
+    return Math.ceil(u.base * Math.pow(u.growth, owned));
+  }
+  // total cost to buy `count` more from current owned
+  function bulkCost(u, owned, count){
+    let total = 0;
+    for(let i=0;i<count;i++) total += costOf(u, owned+i);
+    return total;
+  }
+  // how many can we afford, capped by max and budget
+  function maxAffordable(u, owned, budget){
+    let n=0, spend=0, cap=u.max-owned;
+    while(n<cap){
+      const c = costOf(u, owned+n);
+      if(spend + c > budget) break;
+      spend += c; n++;
+    }
+    return n;
+  }
+
+  function perClick(){
+    let flat = 1;
+    let clickMult = 1, allMult = 1;
+    UP.forEach(u=>{
+      const o = S.upgrades[u.id];
+      if(!o) return;
+      if(u.kind==='click') flat += u.add * o;
+      if(u.kind==='mult' && u.target==='click') clickMult *= Math.pow(u.mult,o);
+      if(u.kind==='mult' && u.target==='all')   allMult   *= Math.pow(u.mult,o);
+    });
+    return flat * clickMult * allMult;
+  }
+  function perSec(){
+    let flat = 0;
+    let autoMult = 1, allMult = 1;
+    UP.forEach(u=>{
+      const o = S.upgrades[u.id];
+      if(!o) return;
+      if(u.kind==='auto') flat += u.add * o;
+      if(u.kind==='mult' && u.target==='auto') autoMult *= Math.pow(u.mult,o);
+      if(u.kind==='mult' && u.target==='all')  allMult  *= Math.pow(u.mult,o);
+    });
+    return flat * autoMult * allMult;
+  }
+
+  function unlocked(u){
+    if(!u.req) return true;
+    for(const k in u.req){ if(S.upgrades[k] < u.req[k]) return false; }
+    return true;
+  }
+  function reqText(u){
+    const parts=[];
+    for(const k in u.req){
+      const need=u.req[k], have=S.upgrades[k];
+      if(have<need) parts.push(`${UPMAP[k].name} ${have}/${need}`);
+    }
+    return 'Requires '+parts.join(', ');
+  }
+
+  // ---------- DOM ----------
+  const $ = id => document.getElementById(id);
+  const emberCountEl=$('emberCount'), perClickEl=$('perClick'), perSecEl=$('perSec');
+  const listEl=$('list'), tabsEl=$('tabs'), coreWrap=$('coreWrap');
+  const vbFill=$('vbFill'), vbPct=$('vbPct'), forgeHint=$('forgeHint');
+
+  // tabs
+  function renderTabs(){
+    tabsEl.innerHTML='';
+    TABS.forEach(t=>{
+      const hasAfford = UP.some(u=>u.tab===t.id && unlocked(u) &&
+        S.upgrades[u.id]<u.max && S.ember>=costOf(u,S.upgrades[u.id]));
+      const el=document.createElement('div');
+      el.className='tab'+(S.tab===t.id?' active':'');
+      el.innerHTML = t.name + (hasAfford && S.tab!==t.id ? '<span class="dot"></span>':'');
+      el.onclick=()=>{ S.tab=t.id; renderTabs(); renderList(); };
+      tabsEl.appendChild(el);
+    });
+  }
+
+  // one card
+  function makeCard(u){
+    const owned = S.upgrades[u.id];
+    const isUnlocked = unlocked(u);
+    const isMax = owned >= u.max;
+    const card=document.createElement('div');
+    card.className='card';
+    card.dataset.uid=u.id;
+    if(u.kind==='final') card.className+=' final';
+
+    if(!isUnlocked){ card.className+=' locked'; }
+    else if(isMax){ card.className+=' maxed'; }
+
+    // determine buy count & cost
+    let count=1, cost=0, canBuy=false;
+    if(isUnlocked && !isMax){
+      if(S.buyN==='max'){ count = Math.max(1, maxAffordable(u,owned,S.ember)); }
+      else { count = Math.min(u.buyNval||S.buyN, u.max-owned); }
+      if(u.kind==='final') count=1;
+      cost = bulkCost(u, owned, count);
+      canBuy = S.ember >= cost && count>0;
+      if(canBuy) card.className+=' affordable';
+    }
+
+    // effect preview
+    let effect='';
+    if(u.kind==='click') effect = `+${fmt(u.add*(u.kind==='final'?1:1))}/strike each`;
+    if(u.kind==='auto')  effect = `+${fmt(u.add)}/sec each`;
+    if(u.kind==='mult'){
+      const tgt = u.target==='click'?'strike':u.target==='auto'?'/sec':'ALL';
+      effect = `×${u.mult} ${tgt} each`;
+    }
+    if(u.kind==='final') effect='';
+
+    const ownedTxt = u.kind==='final' ? '' :
+      `<span class="card-owned">${owned}${u.max<9999?'/'+u.max:''}</span>`;
+
+    let footRight;
+    if(!isUnlocked) footRight = `<span class="lock-note">${reqText(u)}</span>`;
+    else if(isMax)  footRight = `<span class="maxed-note">MAX</span>`;
+    else {
+      const label = u.kind==='final' ? 'IGNITE' :
+                    (count>1? `Buy ${count}` : 'Buy');
+      footRight = `<span class="card-cost ${canBuy?'':'cant'}">${fmt(cost)} ◈ ${label}</span>`;
+    }
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="card-name">${u.name}<span class="tier">${u.tier}</span></div>
+        ${ownedTxt}
+      </div>
+      <div class="card-desc">${u.desc}</div>
+      <div class="card-foot">
+        <span class="card-effect">${effect}</span>
+        ${footRight}
+      </div>`;
+
+    if(isUnlocked && !isMax){
+      // pointerup (not click) so tiny mouse movement between press and
+      // release doesn't cancel the purchase. buy() recomputes cost itself.
+      card.addEventListener('pointerup', (e)=>{ e.preventDefault(); buy(u); });
+    }
+    return card;
+  }
+
+  function renderList(){
+    listEl.innerHTML='';
+    const items = UP.filter(u=>u.tab===S.tab);
+    // sort: final last, unlocked first
+    items.forEach(u=> listEl.appendChild(makeCard(u)));
+  }
+
+  // Lightweight per-tick update: only toggles affordability styling and cost
+  // text on existing cards. Never replaces card DOM, so a click/tap in progress
+  // can't land on a destroyed element. Rebuilds only when a card's structural
+  // state (locked/maxed/count) would actually change.
+  function refreshAffordability(){
+    let needsRebuild = false;
+    for(const u of UP){
+      if(u.tab !== S.tab) continue;
+      const card = listEl.querySelector(`[data-uid="${u.id}"]`);
+      if(!card) continue;
+      const owned = S.upgrades[u.id];
+      const isUnlocked = unlocked(u);
+      const isMax = owned >= u.max;
+
+      // If lock/max status changed since render, we must rebuild structure.
+      const wasLocked = card.classList.contains('locked');
+      const wasMax = card.classList.contains('maxed');
+      if(isUnlocked === wasLocked || isMax !== wasMax){ needsRebuild = true; break; }
+      if(!isUnlocked || isMax) continue;
+
+      let count = (S.buyN==='max')
+        ? Math.max(1, maxAffordable(u,owned,S.ember))
+        : Math.min(S.buyN, u.max-owned);
+      if(u.kind==='final') count=1;
+      const cost = bulkCost(u, owned, count);
+      const canBuy = S.ember >= cost && count>0;
+
+      card.classList.toggle('affordable', canBuy);
+      const costEl = card.querySelector('.card-cost');
+      if(costEl){
+        costEl.classList.toggle('cant', !canBuy);
+        const label = u.kind==='final' ? 'IGNITE' : (count>1? `Buy ${count}` : 'Buy');
+        costEl.textContent = `${fmt(cost)} \u25c8 ${label}`;
+      }
+    }
+    if(needsRebuild){ renderTabs(); renderList(); }
+    else { updateTabDots(); }
+  }
+
+  // update only the "affordable" dots on tabs without rebuilding them
+  function updateTabDots(){
+    const tabEls = tabsEl.querySelectorAll('.tab');
+    TABS.forEach((t,i)=>{
+      const el = tabEls[i]; if(!el) return;
+      const hasAfford = UP.some(u=>u.tab===t.id && unlocked(u) &&
+        S.upgrades[u.id]<u.max && S.ember>=costOf(u,S.upgrades[u.id]));
+      const hasDot = !!el.querySelector('.dot');
+      if(hasAfford && S.tab!==t.id && !hasDot){
+        el.insertAdjacentHTML('beforeend','<span class="dot"></span>');
+      } else if((!hasAfford || S.tab===t.id) && hasDot){
+        el.querySelector('.dot').remove();
+      }
+    });
+  }
+
+  // ---------- buying ----------
+  // Recomputes count/cost at the moment of purchase so a stale render can't
+  // desync the price from what's on screen.
+  function buy(u){
+    const owned = S.upgrades[u.id];
+    if(!unlocked(u)) return;
+    if(owned >= u.max) return;
+
+    if(u.kind==='final'){
+      if(S.ember < u.base){ toast(`Need ${fmt(u.base)} \u25c8 to ignite`); return; }
+      S.ember -= u.base;
+      S.upgrades[u.id]=1;
+      win();
+      return;
+    }
+
+    let count;
+    if(S.buyN==='max'){ count = maxAffordable(u, owned, S.ember); }
+    else { count = Math.min(S.buyN, u.max-owned); }
+    if(count < 1){ toast('Not enough Ember'); return; }
+
+    const cost = bulkCost(u, owned, count);
+    if(S.ember < cost){ toast('Not enough Ember'); return; }
+
+    S.ember -= cost;
+    S.upgrades[u.id]+=count;
+    checkUnlockToast();
+    renderAll();      // structural change: full rebuild is correct here
+    save();
+  }
+
+  let knownUnlocked = {};
+  UP.forEach(u=> knownUnlocked[u.id]=unlocked(u));
+  function checkUnlockToast(){
+    UP.forEach(u=>{
+      const now=unlocked(u);
+      if(now && !knownUnlocked[u.id]){
+        knownUnlocked[u.id]=true;
+        toast(`Unlocked: <span class="t-name">${u.name}</span>`);
+      }
+    });
+  }
+
+  // ---------- clicking the core ----------
+  function strike(clientX, clientY){
+    if(S.won) return;
+    const gain = perClick();
+    S.ember += gain; S.totalEarned += gain; S.clicks++;
+    spawnFloat(clientX, clientY, '+'+fmt(gain));
+    pulseCore();
+    renderAll();
+    if(S.clicks===1){ forgeHint.textContent='The flame answers'; }
+    save();
+  }
+  coreWrap.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    strike(e.clientX, e.clientY);
+  });
+
+  function pulseCore(){
+    const c=$('core');
+    c.style.transform='scale(1.06)';
+    setTimeout(()=>c.style.transform='',70);
+  }
+  function spawnFloat(x,y,txt){
+    const f=document.createElement('div');
+    f.className='float';
+    f.textContent=txt;
+    f.style.left=(x-20)+'px'; f.style.top=(y-10)+'px';
+    f.style.fontSize=(Math.min(28, 14+String(txt).length))+'px';
+    document.body.appendChild(f);
+    setTimeout(()=>f.remove(),900);
+  }
+
+  // ---------- buy-mode buttons ----------
+  $('buyMode').querySelectorAll('button').forEach(b=>{
+    b.onclick=()=>{
+      $('buyMode').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      const n=b.dataset.n;
+      S.buyN = n==='max' ? 'max' : parseInt(n,10);
+      renderList();
+    };
+  });
+
+  // ---------- reset ----------
+  function hardReset(){
+    S.ember=0; S.totalEarned=0; S.clicks=0; S.started=Date.now(); S.won=false;
+    for(const k in S.upgrades) S.upgrades[k]=0;
+    UP.forEach(u=> knownUnlocked[u.id]=unlocked(u));
+    $('win').classList.remove('show');
+    forgeHint.textContent='Strike the core';
+    save(); renderAll();
+  }
+  $('resetBtn').onclick=()=>{
+    if(confirm('Reset all progress? This cannot be undone.')) hardReset();
+  };
+  $('winReset').onclick=hardReset;
+
+  // ---------- toast ----------
+  let toastT;
+  function toast(html){
+    const t=$('toast');
+    t.innerHTML=html; t.classList.add('show');
+    clearTimeout(toastT);
+    toastT=setTimeout(()=>t.classList.remove('show'),2200);
+  }
+
+  // ---------- victory ----------
+  function win(){
+    S.won=true;
+    const secs=Math.floor((Date.now()-S.started)/1000);
+    const m=Math.floor(secs/60), sxx=secs%60;
+    $('winStats').innerHTML =
+      `Total Ember forged: <b>${fmt(S.totalEarned)}</b><br>`+
+      `Strikes: <b>${fmt(S.clicks)}</b><br>`+
+      `Time to ignition: <b>${m}m ${sxx}s</b>`;
+    $('win').classList.add('show');
+    burstStars();
+    save();
+  }
+
+  // ---------- victory progress bar ----------
+  // progress = log-scaled totalEarned toward final cost
+  function victoryProgress(){
+    const goal = UPMAP.FINAL.base;
+    if(S.totalEarned<=0) return 0;
+    const p = Math.log10(Math.max(1,S.totalEarned)) / Math.log10(goal);
+    return Math.max(0, Math.min(1, p));
+  }
+
+  // ---------- render ----------
+  function renderAll(){
+    emberCountEl.textContent = fmt(S.ember);
+    perClickEl.textContent = fmt(perClick());
+    perSecEl.textContent = fmt(perSec());
+    const vp=victoryProgress();
+    vbFill.style.width=(vp*100).toFixed(1)+'%';
+    vbPct.textContent=Math.floor(vp*100)+'%';
+    renderTabs();
+    renderList();
+  }
+
+  // ---------- starfield canvas ----------
+  const sf=$('starfield'), sctx=sf.getContext('2d');
+  let stars=[], sw, sh, embers=[];
+  function sfResize(){
+    const forge=$('forge').getBoundingClientRect();
+    sw=sf.width=forge.width; sh=sf.height=forge.height;
+    stars=[];
+    for(let i=0;i<80;i++){
+      stars.push({x:Math.random()*sw,y:Math.random()*sh,
+        r:Math.random()*1.3+.2, tw:Math.random()*Math.PI*2, sp:Math.random()*.03+.01});
+    }
+  }
+  window.addEventListener('resize', ()=>{ sfResize(); });
+  sfResize();
+
+  function burstStars(){
+    for(let i=0;i<60;i++){
+      embers.push({x:sw/2,y:sh/2,
+        vx:(Math.random()-.5)*8, vy:(Math.random()-.5)*8,
+        life:1, r:Math.random()*3+1,
+        c:['#ff7a18','#ffd668','#5fe6ff','#b98cff'][i%4]});
+    }
+  }
+
+  let last=performance.now(), acc=0;
+  function frame(now){
+    const dt=(now-last)/1000; last=now;
+
+    // passive income
+    if(!S.won){
+      const ps=perSec();
+      if(ps>0){
+        const gain=ps*dt;
+        S.ember+=gain; S.totalEarned+=gain;
+        acc+=dt;
+        if(acc>0.1){ emberCountEl.textContent=fmt(S.ember);
+          const vp=victoryProgress(); vbFill.style.width=(vp*100).toFixed(1)+'%';
+          vbPct.textContent=Math.floor(vp*100)+'%'; acc=0;
+          // in-place affordability refresh — does NOT rebuild card DOM,
+          // so purchases can't be lost to a mid-tick re-render.
+          refreshAffordability();
+        }
+      }
+    }
+
+    // draw starfield
+    sctx.clearRect(0,0,sw,sh);
+    for(const s of stars){
+      s.tw+=s.sp;
+      const a=0.3+Math.abs(Math.sin(s.tw))*0.6;
+      sctx.globalAlpha=a; sctx.fillStyle='#cdb6ff';
+      sctx.fillRect(s.x,s.y,s.r,s.r);
+    }
+    sctx.globalAlpha=1;
+    // victory embers
+    for(let i=embers.length-1;i>=0;i--){
+      const e=embers[i];
+      e.x+=e.vx; e.y+=e.vy; e.vy+=0.05; e.life-=0.012;
+      if(e.life<=0){ embers.splice(i,1); continue; }
+      sctx.globalAlpha=e.life; sctx.fillStyle=e.c;
+      sctx.beginPath(); sctx.arc(e.x,e.y,e.r,0,7); sctx.fill();
+    }
+    sctx.globalAlpha=1;
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // periodic save
+  setInterval(save, 5000);
+
+  // ---------- boot ----------
+  renderAll();
+  if(S.won){ /* let them keep the won state visible via reset */ }
+})();
+</script>
+</body>
+</html>
